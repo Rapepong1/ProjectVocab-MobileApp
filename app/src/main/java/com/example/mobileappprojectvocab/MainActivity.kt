@@ -7,17 +7,24 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.*
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.scaleIn
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -77,7 +84,7 @@ fun VocabularyApp(viewModel: MainViewModel) {
 @Composable
 fun WordListScreen(viewModel: MainViewModel) {
     val categories by viewModel.categories.collectAsState()
-    val words = viewModel.getFilteredAndSortedWords()
+    val words by viewModel.filteredWords.collectAsState()
     val selectedCategoryId by viewModel.selectedCategoryId.collectAsState()
     val sortOrder by viewModel.sortOrder.collectAsState()
 
@@ -214,6 +221,7 @@ fun QuizScreen(viewModel: MainViewModel) {
     val quizWords by viewModel.quizWords.collectAsState()
     val currentIndex by viewModel.currentQuizIndex.collectAsState()
     val isRevealed by viewModel.isTranslationRevealed.collectAsState()
+    val isFinished by viewModel.isQuizFinished.collectAsState()
 
     if (quizWords.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -222,54 +230,119 @@ fun QuizScreen(viewModel: MainViewModel) {
         return
     }
 
-    val currentWord = quizWords[currentIndex]
+    if (isFinished) {
+        QuizFinishedScreen(onRestart = { viewModel.startQuiz() })
+    } else {
+        val currentWord = quizWords[currentIndex]
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        if (currentWord.isFavorite) {
-            Text("★ Favorite Word ★", color = Color(0xFFDAA520), fontWeight = FontWeight.Bold)
-        }
-        Card(
-            modifier = Modifier.fillMaxWidth().height(200.dp).padding(16.dp),
-            onClick = { viewModel.toggleRevealTranslation() }
+        Column(
+            modifier = Modifier.fillMaxSize().padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(currentWord.word, fontSize = 32.sp, fontWeight = FontWeight.Bold)
-                    if (isRevealed) {
-                        if (!currentWord.pos.isNullOrBlank()) {
-                            Text(currentWord.pos, color = Color.Gray)
+            if (currentWord.isFavorite) {
+                Text("★ Favorite Word ★", color = Color(0xFFDAA520), fontWeight = FontWeight.Bold)
+            }
+            Card(
+                modifier = Modifier.fillMaxWidth().height(200.dp).padding(16.dp),
+                onClick = { viewModel.toggleRevealTranslation() }
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(currentWord.word, fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                        if (isRevealed) {
+                            if (!currentWord.pos.isNullOrBlank()) {
+                                Text(currentWord.pos, color = Color.Gray)
+                            }
+                            Text(currentWord.translation, fontSize = 24.sp)
+                        } else {
+                            Text("(Tap to reveal)", color = Color.Gray, fontSize = 14.sp)
                         }
-                        Text(currentWord.translation, fontSize = 24.sp)
-                    } else {
-                        Text("(Tap to reveal)", color = Color.Gray, fontSize = 14.sp)
                     }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-        Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
-            Button(onClick = { viewModel.previousQuizWord() }, enabled = currentIndex > 0) {
-                Text("Back")
+            Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
+                Button(onClick = { viewModel.previousQuizWord() }, enabled = currentIndex > 0) {
+                    Text("Back")
+                }
+                Button(onClick = { viewModel.toggleRevealTranslation() }) {
+                    Text(if (isRevealed) "Hide" else "Reveal")
+                }
+                Button(
+                    onClick = { viewModel.nextQuizWord() }
+                ) {
+                    Text(if (currentIndex == quizWords.size - 1) "Finish" else "Next")
+                }
             }
-            Button(onClick = { viewModel.toggleRevealTranslation() }) {
-                Text(if (isRevealed) "Hide" else "Reveal")
-            }
-            Button(onClick = { viewModel.nextQuizWord() }, enabled = currentIndex < quizWords.size - 1) {
-                Text("Next")
+
+            Spacer(Modifier.height(16.dp))
+            Text("Word ${currentIndex + 1} of ${quizWords.size}")
+
+            Button(onClick = { viewModel.startQuiz() }, modifier = Modifier.padding(top = 16.dp)) {
+                Text("Shuffle & Restart")
             }
         }
-        
-        Spacer(Modifier.height(16.dp))
-        Text("Word ${currentIndex + 1} of ${quizWords.size}")
-        
-        Button(onClick = { viewModel.startQuiz() }, modifier = Modifier.padding(top = 16.dp)) {
-            Text("Shuffle & Restart")
+    }
+}
+
+@Composable
+fun QuizFinishedScreen(onRestart: () -> Unit) {
+    val infiniteTransition = rememberInfiniteTransition(label = "congrats")
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scale"
+    )
+
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn() + scaleIn()
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    modifier = Modifier
+                        .size(120.dp)
+                        .scale(scale)
+                        .background(Color(0xFFFFD700), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Star,
+                        contentDescription = null,
+                        modifier = Modifier.size(80.dp),
+                        tint = Color.White
+                    )
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    "Congratulations!",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    "You've completed the quiz!",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Spacer(modifier = Modifier.height(32.dp))
+                Button(onClick = onRestart) {
+                    Icon(Icons.Default.Refresh, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Try Again")
+                }
+            }
         }
     }
 }

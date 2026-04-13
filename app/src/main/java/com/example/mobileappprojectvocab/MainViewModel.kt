@@ -1,9 +1,13 @@
 package com.example.mobileappprojectvocab
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import java.util.UUID
 
@@ -29,7 +33,30 @@ class MainViewModel : ViewModel() {
     private val _isTranslationRevealed = MutableStateFlow(false)
     val isTranslationRevealed: StateFlow<Boolean> = _isTranslationRevealed.asStateFlow()
 
+    private val _isQuizFinished = MutableStateFlow(false)
+    val isQuizFinished: StateFlow<Boolean> = _isQuizFinished.asStateFlow()
+
     enum class SortOrder { ALPHABETICAL, CREATED_AT }
+
+    val filteredWords: StateFlow<List<Word>> = combine(
+        _words,
+        _selectedCategoryId,
+        _sortOrder
+    ) { words, selectedId, sortOrder ->
+        var list = if (selectedId != null) {
+            words.filter { it.categoryId == selectedId }
+        } else {
+            words
+        }
+
+        list.sortedWith(compareByDescending<Word> { it.isFavorite }
+            .thenBy {
+                when (sortOrder) {
+                    SortOrder.ALPHABETICAL -> it.word.lowercase()
+                    SortOrder.CREATED_AT -> it.createdAt
+                }
+            })
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         // Starter Pack
@@ -51,22 +78,6 @@ class MainViewModel : ViewModel() {
 
     fun setSortOrder(order: SortOrder) {
         _sortOrder.value = order
-    }
-
-    fun getFilteredAndSortedWords(): List<Word> {
-        var list = _words.value
-        val categoryId = _selectedCategoryId.value
-        if (categoryId != null) {
-            list = list.filter { it.categoryId == categoryId }
-        }
-
-        return list.sortedWith(compareByDescending<Word> { it.isFavorite }
-            .thenBy {
-                when (_sortOrder.value) {
-                    SortOrder.ALPHABETICAL -> it.word.lowercase()
-                    SortOrder.CREATED_AT -> it.createdAt
-                }
-            })
     }
 
     // Category CRUD
@@ -120,12 +131,15 @@ class MainViewModel : ViewModel() {
         _quizWords.value = list.shuffled()
         _currentQuizIndex.value = 0
         _isTranslationRevealed.value = false
+        _isQuizFinished.value = false
     }
 
     fun nextQuizWord() {
         if (_currentQuizIndex.value < _quizWords.value.size - 1) {
             _currentQuizIndex.value++
             _isTranslationRevealed.value = false
+        } else {
+            _isQuizFinished.value = true
         }
     }
 
@@ -133,6 +147,7 @@ class MainViewModel : ViewModel() {
         if (_currentQuizIndex.value > 0) {
             _currentQuizIndex.value--
             _isTranslationRevealed.value = false
+            _isQuizFinished.value = false
         }
     }
 

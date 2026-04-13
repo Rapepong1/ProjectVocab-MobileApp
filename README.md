@@ -14,7 +14,7 @@ Features
 - สามารถกด Favorite คำศัพท์ได้
 - คำที่ Favorite จะอยู่ด้านบนสุดเสมอ ตอน Quiz ก็จะบอกว่า คำๆนี้เรา Favorite ไว้
 
-![alt text](image.png)  ![alt text](image-1.png)
+![alt text](docs/image-2.png)  ![alt text](docs/image-1.png)
 
 Input Word
 - คำศัพท์,Part-of-Speech (POS)(optional),คำแปล
