@@ -62,17 +62,54 @@ class MainViewModel : ViewModel() {
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
-        // Starter Pack
+        // Starter Pack - Practical Advanced Categories
         val uncategorized = Category(name = "Uncategorized (ไม่ระบุ)")
-        val foodCategory = Category(name = "Food")
-        val financeCategory = Category(name = "Finance")
-        _categories.value = listOf(uncategorized, foodCategory, financeCategory)
+        val businessCategory = Category(name = "Workplace & Business")
+        val academicCategory = Category(name = "Academic & Research")
+        val personalityCategory = Category(name = "Personality & Behavior")
+        val societyCategory = Category(name = "Society & Environment")
+        val techCategory = Category(name = "Technology & Digital")
+        
+        _categories.value = listOf(
+            uncategorized, businessCategory, academicCategory, 
+            personalityCategory, societyCategory, techCategory
+        )
 
         _words.value = listOf(
-            Word(categoryId = foodCategory.id, word = "Apple", translation = "แอปเปิ้ล", pos = "Noun"),
-            Word(categoryId = foodCategory.id, word = "Bread", translation = "ขนมปัง", pos = "Noun"),
-            Word(categoryId = financeCategory.id, word = "Investment", translation = "การลงทุน", pos = "Noun"),
-            Word(categoryId = financeCategory.id, word = "Interest", translation = "ดอกเบี้ย", pos = "Noun")
+            // Workplace & Business
+            Word(categoryId = businessCategory.id, word = "Collaborate", translation = "ร่วมมือกันทำงาน", pos = "Verb"),
+            Word(categoryId = businessCategory.id, word = "Implement", translation = "นำไปปฏิบัติ/เริ่มใช้", pos = "Verb"),
+            Word(categoryId = businessCategory.id, word = "Mitigate", translation = "บรรเทา/ลดผลกระทบ", pos = "Verb"),
+            Word(categoryId = businessCategory.id, word = "Objective", translation = "วัตถุประสงค์/เป้าหมาย", pos = "Noun"),
+            Word(categoryId = businessCategory.id, word = "Preliminary", translation = "ขั้นต้น/เบื้องต้น", pos = "Adjective"),
+            
+            // Academic & Research
+            Word(categoryId = academicCategory.id, word = "Analysis", translation = "การวิเคราะห์", pos = "Noun"),
+            Word(categoryId = academicCategory.id, word = "Hypothesis", translation = "สมมติฐาน", pos = "Noun"),
+            Word(categoryId = academicCategory.id, word = "Interpretation", translation = "การตีความ", pos = "Noun"),
+            Word(categoryId = academicCategory.id, word = "Significant", translation = "สำคัญอย่างมีนัยสำคัญ", pos = "Adjective"),
+            Word(categoryId = academicCategory.id, word = "Evidence", translation = "หลักฐาน", pos = "Noun"),
+            
+            // Personality & Behavior
+            Word(categoryId = personalityCategory.id, word = "Resilient", translation = "ยืดหยุ่น/คืนสภาพเดิมเร็ว", pos = "Adjective"),
+            Word(categoryId = personalityCategory.id, word = "Meticulous", translation = "พิถีพิถัน/ละเอียดถี่ถ้วน", pos = "Adjective"),
+            Word(categoryId = personalityCategory.id, word = "Versatile", translation = "มีความสามารถรอบด้าน", pos = "Adjective"),
+            Word(categoryId = personalityCategory.id, word = "Proactive", translation = "เชิงรุก/เตรียมการไว้ก่อน", pos = "Adjective"),
+            Word(categoryId = personalityCategory.id, word = "Empathetic", translation = "ที่เห็นอกเห็นใจผู้อื่น", pos = "Adjective"),
+            
+            // Society & Environment
+            Word(categoryId = societyCategory.id, word = "Sustainable", translation = "ยั่งยืน", pos = "Adjective"),
+            Word(categoryId = societyCategory.id, word = "Inevitable", translation = "ที่หลีกเลี่ยงไม่ได้", pos = "Adjective"),
+            Word(categoryId = societyCategory.id, word = "Diversity", translation = "ความหลากหลาย", pos = "Noun"),
+            Word(categoryId = societyCategory.id, word = "Consequence", translation = "ผลที่ตามมา", pos = "Noun"),
+            Word(categoryId = societyCategory.id, word = "Transparency", translation = "ความโปร่งใส", pos = "Noun"),
+            
+            // Technology & Digital
+            Word(categoryId = techCategory.id, word = "Automation", translation = "ระบบอัตโนมัติ", pos = "Noun"),
+            Word(categoryId = techCategory.id, word = "Integration", translation = "การรวมเข้าด้วยกัน", pos = "Noun"),
+            Word(categoryId = techCategory.id, word = "Optimization", translation = "การเพิ่มประสิทธิภาพสูงสุด", pos = "Noun"),
+            Word(categoryId = techCategory.id, word = "Infrastructure", translation = "โครงสร้างพื้นฐาน", pos = "Noun"),
+            Word(categoryId = techCategory.id, word = "Accessibility", translation = "การเข้าถึงได้ง่าย", pos = "Noun")
         )
     }
 
