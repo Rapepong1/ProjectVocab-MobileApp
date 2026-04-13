@@ -101,13 +101,13 @@ fun WordListScreen(viewModel: MainViewModel) {
         LazyRow(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
             item {
                 FilterChip(
-                    selected = selectedCategoryId == null,
-                    onClick = { viewModel.selectCategory(null) },
+                    selected = selectedCategoryId == "",
+                    onClick = { viewModel.selectCategory("") },
                     label = { Text("All") },
                     modifier = Modifier.padding(end = 4.dp)
                 )
             }
-            items(categories) { category ->
+            items(categories, key = { it.id }) { category ->
                 FilterChip(
                     selected = selectedCategoryId == category.id,
                     onClick = { viewModel.selectCategory(category.id) },
@@ -153,7 +153,7 @@ fun WordListScreen(viewModel: MainViewModel) {
         }
 
         LazyColumn(modifier = Modifier.fillMaxSize()) {
-            items(words) { word ->
+            items(words, key = { it.id }) { word ->
                 WordItem(
                     word = word,
                     onFavoriteToggle = { viewModel.toggleFavorite(word.id) },

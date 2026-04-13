@@ -18,8 +18,8 @@ class MainViewModel : ViewModel() {
     private val _words = MutableStateFlow<List<Word>>(emptyList())
     val words: StateFlow<List<Word>> = _words.asStateFlow()
 
-    private val _selectedCategoryId = MutableStateFlow<String?>(null)
-    val selectedCategoryId: StateFlow<String?> = _selectedCategoryId.asStateFlow()
+    private val _selectedCategoryId = MutableStateFlow("") // ใช้ "" แทน null สำหรับ "All"
+    val selectedCategoryId: StateFlow<String> = _selectedCategoryId.asStateFlow()
 
     private val _sortOrder = MutableStateFlow(SortOrder.CREATED_AT)
     val sortOrder: StateFlow<SortOrder> = _sortOrder.asStateFlow()
@@ -46,7 +46,7 @@ class MainViewModel : ViewModel() {
         _selectedCategoryId,
         _sortOrder
     ) { words, selectedId, sortOrder ->
-        var list = if (selectedId != null) {
+        var list = if (selectedId.isNotEmpty()) {
             words.filter { it.categoryId == selectedId }
         } else {
             words
@@ -113,7 +113,7 @@ class MainViewModel : ViewModel() {
         )
     }
 
-    fun selectCategory(id: String?) {
+    fun selectCategory(id: String) {
         _selectedCategoryId.value = id
     }
 
@@ -135,7 +135,7 @@ class MainViewModel : ViewModel() {
     fun deleteCategory(id: String) {
         _categories.update { it.filter { it.id != id } }
         _words.update { it.filter { it.categoryId != id } }
-        if (_selectedCategoryId.value == id) _selectedCategoryId.value = null
+        if (_selectedCategoryId.value == id) _selectedCategoryId.value = ""
     }
 
     // Word CRUD
@@ -166,7 +166,7 @@ class MainViewModel : ViewModel() {
     fun startQuiz() {
         var list = _words.value
         val categoryId = _selectedCategoryId.value
-        if (categoryId != null) {
+        if (categoryId.isNotEmpty()) {
             list = list.filter { it.categoryId == categoryId }
         }
         _quizWords.value = list.shuffled()
