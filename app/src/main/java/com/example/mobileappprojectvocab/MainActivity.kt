@@ -18,12 +18,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -221,6 +224,7 @@ fun QuizScreen(viewModel: MainViewModel) {
     val quizWords by viewModel.quizWords.collectAsState()
     val currentIndex by viewModel.currentQuizIndex.collectAsState()
     val isRevealed by viewModel.isTranslationRevealed.collectAsState()
+    val isHintRevealed by viewModel.isHintRevealed.collectAsState()
     val isFinished by viewModel.isQuizFinished.collectAsState()
 
     if (quizWords.isEmpty()) {
@@ -234,22 +238,78 @@ fun QuizScreen(viewModel: MainViewModel) {
         QuizFinishedScreen(onRestart = { viewModel.startQuiz() })
     } else {
         val currentWord = quizWords[currentIndex]
+        val progress = (currentIndex + 1).toFloat() / quizWords.size
 
         Column(
             modifier = Modifier.fillMaxSize().padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            // Progress Bar
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Progress", style = MaterialTheme.typography.labelMedium)
+                    Text("${currentIndex + 1} / ${quizWords.size}", style = MaterialTheme.typography.labelMedium)
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(4.dp)),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             if (currentWord.isFavorite) {
                 Text("★ Favorite Word ★", color = Color(0xFFDAA520), fontWeight = FontWeight.Bold)
             }
+            
             Card(
-                modifier = Modifier.fillMaxWidth().height(200.dp).padding(16.dp),
+                modifier = Modifier.fillMaxWidth().height(250.dp).padding(16.dp),
                 onClick = { viewModel.toggleRevealTranslation() }
             ) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    // Hint Button at top right
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                            .clickable { viewModel.toggleRevealHint() },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Info,
+                            contentDescription = "Hint",
+                            modifier = Modifier.size(18.dp),
+                            tint = if (isHintRevealed) MaterialTheme.colorScheme.primary else Color.Gray
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Hint",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (isHintRevealed) MaterialTheme.colorScheme.primary else Color.Gray
+                        )
+                    }
+
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
                         Text(currentWord.word, fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                        
+                        if (isHintRevealed && !isRevealed) {
+                            Text(
+                                "คำแปลขึ้นต้นด้วย: ${currentWord.translation.take(1)}...",
+                                color = MaterialTheme.colorScheme.secondary,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+
                         if (isRevealed) {
                             if (!currentWord.pos.isNullOrBlank()) {
                                 Text(currentWord.pos, color = Color.Gray)
@@ -277,9 +337,6 @@ fun QuizScreen(viewModel: MainViewModel) {
                     Text(if (currentIndex == quizWords.size - 1) "Finish" else "Next")
                 }
             }
-
-            Spacer(Modifier.height(16.dp))
-            Text("Word ${currentIndex + 1} of ${quizWords.size}")
 
             Button(onClick = { viewModel.startQuiz() }, modifier = Modifier.padding(top = 16.dp)) {
                 Text("Shuffle & Restart")

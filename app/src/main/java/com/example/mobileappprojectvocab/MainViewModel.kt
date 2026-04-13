@@ -33,6 +33,9 @@ class MainViewModel : ViewModel() {
     private val _isTranslationRevealed = MutableStateFlow(false)
     val isTranslationRevealed: StateFlow<Boolean> = _isTranslationRevealed.asStateFlow()
 
+    private val _isHintRevealed = MutableStateFlow(false)
+    val isHintRevealed: StateFlow<Boolean> = _isHintRevealed.asStateFlow()
+
     private val _isQuizFinished = MutableStateFlow(false)
     val isQuizFinished: StateFlow<Boolean> = _isQuizFinished.asStateFlow()
 
@@ -60,9 +63,10 @@ class MainViewModel : ViewModel() {
 
     init {
         // Starter Pack
+        val uncategorized = Category(name = "Uncategorized (ไม่ระบุ)")
         val foodCategory = Category(name = "Food")
         val financeCategory = Category(name = "Finance")
-        _categories.value = listOf(foodCategory, financeCategory)
+        _categories.value = listOf(uncategorized, foodCategory, financeCategory)
 
         _words.value = listOf(
             Word(categoryId = foodCategory.id, word = "Apple", translation = "แอปเปิ้ล", pos = "Noun"),
@@ -131,6 +135,7 @@ class MainViewModel : ViewModel() {
         _quizWords.value = list.shuffled()
         _currentQuizIndex.value = 0
         _isTranslationRevealed.value = false
+        _isHintRevealed.value = false
         _isQuizFinished.value = false
     }
 
@@ -138,6 +143,7 @@ class MainViewModel : ViewModel() {
         if (_currentQuizIndex.value < _quizWords.value.size - 1) {
             _currentQuizIndex.value++
             _isTranslationRevealed.value = false
+            _isHintRevealed.value = false
         } else {
             _isQuizFinished.value = true
         }
@@ -147,11 +153,16 @@ class MainViewModel : ViewModel() {
         if (_currentQuizIndex.value > 0) {
             _currentQuizIndex.value--
             _isTranslationRevealed.value = false
+            _isHintRevealed.value = false
             _isQuizFinished.value = false
         }
     }
 
     fun toggleRevealTranslation() {
         _isTranslationRevealed.value = !_isTranslationRevealed.value
+    }
+
+    fun toggleRevealHint() {
+        _isHintRevealed.value = !_isHintRevealed.value
     }
 }
