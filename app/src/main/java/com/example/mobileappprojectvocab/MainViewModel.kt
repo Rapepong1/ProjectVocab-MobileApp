@@ -73,22 +73,45 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val savedWords = dataManager.loadWords()
 
         if (savedCats == null || savedWords == null) {
-            // First time - load Starter Pack
-            val business = Category(name = "Workplace & Business")
-            val academic = Category(name = "Academic & Research")
-            val personality = Category(name = "Personality & Behavior")
-            val society = Category(name = "Society & Environment")
-            val tech = Category(name = "Technology & Digital")
-            val uncategorized = Category(name = "Uncategorized (ไม่ระบุ)")
+            // First time - load Starter Pack with FIXED IDs
+            val cat1 = Category(id = "cat_business", name = "Workplace & Business")
+            val cat2 = Category(id = "cat_academic", name = "Academic & Research")
+            val cat3 = Category(id = "cat_personality", name = "Personality & Behavior")
+            val cat4 = Category(id = "cat_society", name = "Society & Environment")
+            val cat5 = Category(id = "cat_tech", name = "Technology & Digital")
+            val cat6 = Category(id = "cat_uncategorized", name = "Uncategorized (ไม่ระบุ)")
             
-            val initialCats = listOf(uncategorized, business, academic, personality, society, tech)
+            val initialCats = listOf(cat6, cat1, cat2, cat3, cat4, cat5)
             val initialWords = listOf(
-                Word(categoryId = business.id, word = "Collaborate", translation = "ร่วมมือกันทำงาน", pos = "Verb"),
-                Word(categoryId = business.id, word = "Implement", translation = "นำไปปฏิบัติ/เริ่มใช้", pos = "Verb"),
-                Word(categoryId = academic.id, word = "Analysis", translation = "การวิเคราะห์", pos = "Noun"),
-                Word(categoryId = personality.id, word = "Resilient", translation = "ยืดหยุ่น/คืนสภาพเดิมเร็ว", pos = "Adjective"),
-                Word(categoryId = society.id, word = "Sustainable", translation = "ยั่งยืน", pos = "Adjective"),
-                Word(categoryId = tech.id, word = "Automation", translation = "ระบบอัตโนมัติ", pos = "Noun")
+                Word(categoryId = cat1.id, word = "Collaborate", translation = "ร่วมมือกันทำงาน", pos = "Verb"),
+                Word(categoryId = cat1.id, word = "Implement", translation = "นำไปปฏิบัติ/เริ่มใช้", pos = "Verb"),
+                Word(categoryId = cat1.id, word = "Mitigate", translation = "บรรเทา/ลดผลกระทบ", pos = "Verb"),
+                Word(categoryId = cat1.id, word = "Objective", translation = "วัตถุประสงค์", pos = "Noun"),
+                Word(categoryId = cat1.id, word = "Feasibility", translation = "ความเป็นไปได้", pos = "Noun"),
+
+                Word(categoryId = cat2.id, word = "Analysis", translation = "การวิเคราะห์", pos = "Noun"),
+                Word(categoryId = cat2.id, word = "Hypothesis", translation = "สมมติฐาน", pos = "Noun"),
+                Word(categoryId = cat2.id, word = "Empirical", translation = "เชิงประจักษ์", pos = "Adjective"),
+                Word(categoryId = cat2.id, word = "Significant", translation = "สำคัญอย่างมีนัยสำคัญ", pos = "Adjective"),
+                Word(categoryId = cat2.id, word = "Paradigm", translation = "กระบวนทัศน์/แบบอย่าง", pos = "Noun"),
+
+                Word(categoryId = cat3.id, word = "Resilient", translation = "ยืดหยุ่น/คืนสภาพเดิมเร็ว", pos = "Adjective"),
+                Word(categoryId = cat3.id, word = "Meticulous", translation = "พิถีพิถัน", pos = "Adjective"),
+                Word(categoryId = cat3.id, word = "Versatile", translation = "อเนกประสงค์/รอบด้าน", pos = "Adjective"),
+                Word(categoryId = cat3.id, word = "Ambiguous", translation = "กำกวม/คลุมเครือ", pos = "Adjective"),
+                Word(categoryId = cat3.id, word = "Empathy", translation = "ความเห็นอกเห็นใจ", pos = "Noun"),
+
+                Word(categoryId = cat4.id, word = "Sustainable", translation = "ยั่งยืน", pos = "Adjective"),
+                Word(categoryId = cat4.id, word = "Diversity", translation = "ความหลากหลาย", pos = "Noun"),
+                Word(categoryId = cat4.id, word = "Advocate", translation = "สนับสนุน/ผู้ให้การสนับสนุน", pos = "Verb/Noun"),
+                Word(categoryId = cat4.id, word = "Consequence", translation = "ผลที่ตามมา", pos = "Noun"),
+                Word(categoryId = cat4.id, word = "Prosperity", translation = "ความมั่งคั่ง/เจริญรุ่งเรือง", pos = "Noun"),
+
+                Word(categoryId = cat5.id, word = "Automation", translation = "ระบบอัตโนมัติ", pos = "Noun"),
+                Word(categoryId = cat5.id, word = "Integration", translation = "การรวมเข้าด้วยกัน", pos = "Noun"),
+                Word(categoryId = cat5.id, word = "Infrastructure", translation = "โครงสร้างพื้นฐาน", pos = "Noun"),
+                Word(categoryId = cat5.id, word = "Accessibility", translation = "การเข้าถึงได้ง่าย", pos = "Noun"),
+                Word(categoryId = cat5.id, word = "Cybersecurity", translation = "ความปลอดภัยทางไซเบอร์", pos = "Noun")
             )
             _categories.value = initialCats
             _words.value = initialWords
@@ -160,21 +183,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         saveToDisk()
     }
 
-    // Quiz
+    // Quiz - Updated logic to handle empty words properly
     fun startQuiz() {
-        var list = _words.value
+        val allWords = _words.value
         val categoryId = _selectedCategoryId.value
-        if (categoryId.isNotEmpty()) {
-            list = list.filter { it.categoryId == categoryId }
+        
+        val listToQuiz = if (categoryId.isNotEmpty()) {
+            allWords.filter { it.categoryId == categoryId }
+        } else {
+            allWords
         }
-        _quizWords.value = list.shuffled()
-        _currentQuizIndex.value = 0
-        _isTranslationRevealed.value = false
-        _isHintRevealed.value = false
-        _isQuizFinished.value = false
+
+        if (listToQuiz.isNotEmpty()) {
+            _quizWords.value = listToQuiz.shuffled()
+            _currentQuizIndex.value = 0
+            _isTranslationRevealed.value = false
+            _isHintRevealed.value = false
+            _isQuizFinished.value = false
+        } else {
+            _quizWords.value = emptyList()
+            _isQuizFinished.value = false
+        }
     }
 
     fun nextQuizWord() {
+        if (_quizWords.value.isEmpty()) return
+
         if (_currentQuizIndex.value < _quizWords.value.size - 1) {
             _currentQuizIndex.value++
             _isTranslationRevealed.value = false
