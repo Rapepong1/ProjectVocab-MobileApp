@@ -1,6 +1,7 @@
 package com.example.mobileappprojectvocab
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -11,14 +12,16 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import java.util.UUID
 
-class MainViewModel : ViewModel() {
+class MainViewModel(application: Application) : AndroidViewModel(application) {
+    private val dataManager = DataManager(application)
+    
     private val _categories = MutableStateFlow<List<Category>>(emptyList())
     val categories: StateFlow<List<Category>> = _categories.asStateFlow()
 
     private val _words = MutableStateFlow<List<Word>>(emptyList())
     val words: StateFlow<List<Word>> = _words.asStateFlow()
 
-    private val _selectedCategoryId = MutableStateFlow("") // ใช้ "" แทน null สำหรับ "All"
+    private val _selectedCategoryId = MutableStateFlow("")
     val selectedCategoryId: StateFlow<String> = _selectedCategoryId.asStateFlow()
 
     private val _sortOrder = MutableStateFlow(SortOrder.CREATED_AT)
@@ -62,55 +65,43 @@ class MainViewModel : ViewModel() {
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
-        // Starter Pack - Practical Advanced Categories
-        val uncategorized = Category(name = "Uncategorized (ไม่ระบุ)")
-        val businessCategory = Category(name = "Workplace & Business")
-        val academicCategory = Category(name = "Academic & Research")
-        val personalityCategory = Category(name = "Personality & Behavior")
-        val societyCategory = Category(name = "Society & Environment")
-        val techCategory = Category(name = "Technology & Digital")
-        
-        _categories.value = listOf(
-            uncategorized, businessCategory, academicCategory, 
-            personalityCategory, societyCategory, techCategory
-        )
+        loadData()
+    }
 
-        _words.value = listOf(
-            // Workplace & Business
-            Word(categoryId = businessCategory.id, word = "Collaborate", translation = "ร่วมมือกันทำงาน", pos = "Verb"),
-            Word(categoryId = businessCategory.id, word = "Implement", translation = "นำไปปฏิบัติ/เริ่มใช้", pos = "Verb"),
-            Word(categoryId = businessCategory.id, word = "Mitigate", translation = "บรรเทา/ลดผลกระทบ", pos = "Verb"),
-            Word(categoryId = businessCategory.id, word = "Objective", translation = "วัตถุประสงค์/เป้าหมาย", pos = "Noun"),
-            Word(categoryId = businessCategory.id, word = "Preliminary", translation = "ขั้นต้น/เบื้องต้น", pos = "Adjective"),
+    private fun loadData() {
+        val savedCats = dataManager.loadCategories()
+        val savedWords = dataManager.loadWords()
+
+        if (savedCats == null || savedWords == null) {
+            // First time - load Starter Pack
+            val business = Category(name = "Workplace & Business")
+            val academic = Category(name = "Academic & Research")
+            val personality = Category(name = "Personality & Behavior")
+            val society = Category(name = "Society & Environment")
+            val tech = Category(name = "Technology & Digital")
+            val uncategorized = Category(name = "Uncategorized (ไม่ระบุ)")
             
-            // Academic & Research
-            Word(categoryId = academicCategory.id, word = "Analysis", translation = "การวิเคราะห์", pos = "Noun"),
-            Word(categoryId = academicCategory.id, word = "Hypothesis", translation = "สมมติฐาน", pos = "Noun"),
-            Word(categoryId = academicCategory.id, word = "Interpretation", translation = "การตีความ", pos = "Noun"),
-            Word(categoryId = academicCategory.id, word = "Significant", translation = "สำคัญอย่างมีนัยสำคัญ", pos = "Adjective"),
-            Word(categoryId = academicCategory.id, word = "Evidence", translation = "หลักฐาน", pos = "Noun"),
-            
-            // Personality & Behavior
-            Word(categoryId = personalityCategory.id, word = "Resilient", translation = "ยืดหยุ่น/คืนสภาพเดิมเร็ว", pos = "Adjective"),
-            Word(categoryId = personalityCategory.id, word = "Meticulous", translation = "พิถีพิถัน/ละเอียดถี่ถ้วน", pos = "Adjective"),
-            Word(categoryId = personalityCategory.id, word = "Versatile", translation = "มีความสามารถรอบด้าน", pos = "Adjective"),
-            Word(categoryId = personalityCategory.id, word = "Proactive", translation = "เชิงรุก/เตรียมการไว้ก่อน", pos = "Adjective"),
-            Word(categoryId = personalityCategory.id, word = "Empathetic", translation = "ที่เห็นอกเห็นใจผู้อื่น", pos = "Adjective"),
-            
-            // Society & Environment
-            Word(categoryId = societyCategory.id, word = "Sustainable", translation = "ยั่งยืน", pos = "Adjective"),
-            Word(categoryId = societyCategory.id, word = "Inevitable", translation = "ที่หลีกเลี่ยงไม่ได้", pos = "Adjective"),
-            Word(categoryId = societyCategory.id, word = "Diversity", translation = "ความหลากหลาย", pos = "Noun"),
-            Word(categoryId = societyCategory.id, word = "Consequence", translation = "ผลที่ตามมา", pos = "Noun"),
-            Word(categoryId = societyCategory.id, word = "Transparency", translation = "ความโปร่งใส", pos = "Noun"),
-            
-            // Technology & Digital
-            Word(categoryId = techCategory.id, word = "Automation", translation = "ระบบอัตโนมัติ", pos = "Noun"),
-            Word(categoryId = techCategory.id, word = "Integration", translation = "การรวมเข้าด้วยกัน", pos = "Noun"),
-            Word(categoryId = techCategory.id, word = "Optimization", translation = "การเพิ่มประสิทธิภาพสูงสุด", pos = "Noun"),
-            Word(categoryId = techCategory.id, word = "Infrastructure", translation = "โครงสร้างพื้นฐาน", pos = "Noun"),
-            Word(categoryId = techCategory.id, word = "Accessibility", translation = "การเข้าถึงได้ง่าย", pos = "Noun")
-        )
+            val initialCats = listOf(uncategorized, business, academic, personality, society, tech)
+            val initialWords = listOf(
+                Word(categoryId = business.id, word = "Collaborate", translation = "ร่วมมือกันทำงาน", pos = "Verb"),
+                Word(categoryId = business.id, word = "Implement", translation = "นำไปปฏิบัติ/เริ่มใช้", pos = "Verb"),
+                Word(categoryId = academic.id, word = "Analysis", translation = "การวิเคราะห์", pos = "Noun"),
+                Word(categoryId = personality.id, word = "Resilient", translation = "ยืดหยุ่น/คืนสภาพเดิมเร็ว", pos = "Adjective"),
+                Word(categoryId = society.id, word = "Sustainable", translation = "ยั่งยืน", pos = "Adjective"),
+                Word(categoryId = tech.id, word = "Automation", translation = "ระบบอัตโนมัติ", pos = "Noun")
+            )
+            _categories.value = initialCats
+            _words.value = initialWords
+            saveToDisk()
+        } else {
+            _categories.value = savedCats
+            _words.value = savedWords
+        }
+    }
+
+    private fun saveToDisk() {
+        dataManager.saveCategories(_categories.value)
+        dataManager.saveWords(_words.value)
     }
 
     fun selectCategory(id: String) {
@@ -124,23 +115,27 @@ class MainViewModel : ViewModel() {
     // Category CRUD
     fun addCategory(name: String) {
         _categories.update { it + Category(name = name) }
+        saveToDisk()
     }
 
     fun editCategory(id: String, newName: String) {
         _categories.update { list ->
             list.map { if (it.id == id) it.copy(name = newName) else it }
         }
+        saveToDisk()
     }
 
     fun deleteCategory(id: String) {
         _categories.update { it.filter { it.id != id } }
         _words.update { it.filter { it.categoryId != id } }
         if (_selectedCategoryId.value == id) _selectedCategoryId.value = ""
+        saveToDisk()
     }
 
     // Word CRUD
     fun addWord(categoryId: String, word: String, translation: String, pos: String?) {
         _words.update { it + Word(categoryId = categoryId, word = word, translation = translation, pos = pos) }
+        saveToDisk()
     }
 
     fun editWord(id: String, word: String, translation: String, pos: String?, categoryId: String) {
@@ -150,16 +145,19 @@ class MainViewModel : ViewModel() {
                 else it
             }
         }
+        saveToDisk()
     }
 
     fun deleteWord(id: String) {
         _words.update { it.filter { it.id != id } }
+        saveToDisk()
     }
 
     fun toggleFavorite(id: String) {
         _words.update { list ->
             list.map { if (it.id == id) it.copy(isFavorite = !it.isFavorite) else it }
         }
+        saveToDisk()
     }
 
     // Quiz
