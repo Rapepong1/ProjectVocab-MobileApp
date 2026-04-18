@@ -1,6 +1,5 @@
 package com.example.mobileappprojectvocab
 
-import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.webkit.WebSettings
@@ -10,12 +9,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -23,8 +18,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Info
@@ -35,15 +32,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.mobileappprojectvocab.ui.theme.MobileAppProjectVocabTheme
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
@@ -61,16 +58,20 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun VocabularyApp(viewModel: MainViewModel) {
-    var currentTab by remember { mutableIntStateOf(0) } // 0: All Words, 1: Quiz
+    var currentTab by remember { mutableIntStateOf(0) }
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surface,
+                tonalElevation = 0.dp,
+                modifier = Modifier.shadow(16.dp)
+            ) {
                 NavigationBarItem(
                     selected = currentTab == 0,
                     onClick = { currentTab = 0 },
                     icon = { Icon(Icons.Default.List, contentDescription = "Words") },
-                    label = { Text("Words") }
+                    label = { Text("Vocabulary", fontWeight = if(currentTab == 0) FontWeight.Bold else FontWeight.Normal) }
                 )
                 NavigationBarItem(
                     selected = currentTab == 1,
@@ -79,16 +80,33 @@ fun VocabularyApp(viewModel: MainViewModel) {
                         viewModel.startQuiz()
                     },
                     icon = { Icon(Icons.Default.PlayArrow, contentDescription = "Quiz") },
-                    label = { Text("Quiz") }
+                    label = { Text("Quiz", fontWeight = if(currentTab == 1) FontWeight.Bold else FontWeight.Normal) }
                 )
             }
         }
     ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
-            if (currentTab == 0) {
-                WordListScreen(viewModel)
-            } else {
-                QuizScreen(viewModel)
+        Surface(
+            modifier = Modifier.padding(innerPadding),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            AnimatedContent(
+                targetState = currentTab,
+                transitionSpec = {
+                    if (targetState > initialState) {
+                        slideInHorizontally { width -> width } + fadeIn() togetherWith
+                        slideOutHorizontally { width -> -width } + fadeOut()
+                    } else {
+                        slideInHorizontally { width -> -width } + fadeIn() togetherWith
+                        slideOutHorizontally { width -> width } + fadeOut()
+                    }
+                },
+                label = "TabTransition"
+            ) { targetTab ->
+                if (targetTab == 0) {
+                    WordListScreen(viewModel)
+                } else {
+                    QuizScreen(viewModel)
+                }
             }
         }
     }
@@ -106,72 +124,127 @@ fun WordListScreen(viewModel: MainViewModel) {
     var editingWord by remember { mutableStateOf<Word?>(null) }
     var editingCategory by remember { mutableStateOf<Category?>(null) }
     
-    // State for Peek
     var peekingWord by remember { mutableStateOf<Word?>(null) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
-                .blur(if (peekingWord != null) 15.dp else 0.dp) // Blur more when active
+                .padding(horizontal = 20.dp)
+                .blur(if (peekingWord != null) 12.dp else 0.dp)
         ) {
-            Text("Categories", style = MaterialTheme.typography.headlineSmall)
-            LazyRow(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Word", 
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.primary,
+                        letterSpacing = (-1).sp
+                    )
+                    Text(
+                        "Master your vocabulary daily",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
+                
+                FloatingActionButton(
+                    onClick = { showAddWordDialog = true },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add Word")
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            Text(
+                "CATEGORIES", 
+                style = MaterialTheme.typography.labelLarge, 
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.secondary,
+                letterSpacing = 1.2.sp
+            )
+            
+            LazyRow(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 item {
-                    FilterChip(
+                    CategoryChip(
+                        name = "All",
                         selected = selectedCategoryId == "",
-                        onClick = { viewModel.selectCategory("") },
-                        label = { Text("All") },
-                        modifier = Modifier.padding(end = 4.dp)
+                        onClick = { viewModel.selectCategory("") }
                     )
                 }
                 items(categories, key = { it.id }) { category ->
-                    FilterChip(
+                    CategoryChip(
+                        name = category.name,
                         selected = selectedCategoryId == category.id,
                         onClick = { viewModel.selectCategory(category.id) },
-                        label = { Text(category.name) },
-                        trailingIcon = {
-                            Row {
-                                Icon(
-                                    Icons.Default.Edit,
-                                    contentDescription = "Edit",
-                                    modifier = Modifier.size(16.dp).clickable { editingCategory = category }
-                                )
-                                Icon(
-                                    Icons.Default.Delete,
-                                    contentDescription = "Delete",
-                                    modifier = Modifier.size(16.dp).clickable { viewModel.deleteCategory(category.id) }
-                                )
-                            }
-                        },
-                        modifier = Modifier.padding(end = 4.dp)
+                        onEdit = { editingCategory = category },
+                        onDelete = { viewModel.deleteCategory(category.id) }
                     )
                 }
                 item {
-                    IconButton(onClick = { showAddCategoryDialog = true }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Category")
+                    IconButton(
+                        onClick = { showAddCategoryDialog = true },
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "New Category", modifier = Modifier.size(20.dp))
                     }
                 }
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Sort: ", fontWeight = FontWeight.Bold)
-                TextButton(onClick = {
-                    viewModel.setSortOrder(
-                        if (sortOrder == MainViewModel.SortOrder.CREATED_AT) MainViewModel.SortOrder.ALPHABETICAL
-                        else MainViewModel.SortOrder.CREATED_AT
-                    )
-                }) {
-                    Text(if (sortOrder == MainViewModel.SortOrder.CREATED_AT) "Time" else "A-Z")
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.clickable {
+                        viewModel.setSortOrder(
+                            if (sortOrder == MainViewModel.SortOrder.CREATED_AT) MainViewModel.SortOrder.ALPHABETICAL
+                            else MainViewModel.SortOrder.CREATED_AT
+                        )
+                    }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Menu, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            if (sortOrder == MainViewModel.SortOrder.CREATED_AT) "Recently Added" else "Alphabetical",
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
                 }
-                Spacer(Modifier.weight(1f))
-                Button(onClick = { showAddWordDialog = true }) {
-                    Text("Add Word")
-                }
+                
+                Text(
+                    "${words.size} words total",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.outline
+                )
             }
 
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 items(words, key = { it.id }) { word ->
                     WordItem(
                         word = word,
@@ -184,24 +257,20 @@ fun WordListScreen(viewModel: MainViewModel) {
             }
         }
 
-        // Peek Overlay with Dismiss Logic
         AnimatedVisibility(
             visible = peekingWord != null,
-            enter = fadeIn() + scaleIn(initialScale = 0.8f),
-            exit = fadeOut() + scaleOut(targetScale = 0.8f),
+            enter = fadeIn() + scaleIn(initialScale = 0.95f),
+            exit = fadeOut() + scaleOut(targetScale = 0.95f),
             modifier = Modifier.fillMaxSize()
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.5f))
-                    .pointerInput(Unit) {
-                        detectTapGestures { peekingWord = null } // Tap outside to close
-                    },
+                    .background(Color.Black.copy(alpha = 0.6f))
+                    .pointerInput(Unit) { detectTapGestures { peekingWord = null } },
                 contentAlignment = Alignment.Center
             ) {
                 peekingWord?.let { word ->
-                    // Prevent dismiss when clicking inside the card
                     Box(modifier = Modifier.pointerInput(Unit) { detectTapGestures { } }) {
                         WordPeekCard(word, onClose = { peekingWord = null })
                     }
@@ -210,31 +279,40 @@ fun WordListScreen(viewModel: MainViewModel) {
         }
     }
 
-    // Dialogs
-    if (showAddCategoryDialog) {
-        CategoryDialog(onDismiss = { showAddCategoryDialog = false }, onConfirm = { viewModel.addCategory(it); showAddCategoryDialog = false })
-    }
-    editingCategory?.let { category ->
-        CategoryDialog(
-            initialValue = category.name,
-            onDismiss = { editingCategory = null },
-            onConfirm = { viewModel.editCategory(category.id, it); editingCategory = null }
-        )
-    }
-    if (showAddWordDialog) {
-        WordDialog(
-            categories = categories,
-            onDismiss = { showAddWordDialog = false },
-            onConfirm = { w, t, p, c -> viewModel.addWord(c, w, t, p); showAddWordDialog = false }
-        )
-    }
-    editingWord?.let { word ->
-        WordDialog(
-            categories = categories,
-            initialWord = word,
-            onDismiss = { editingWord = null },
-            onConfirm = { w, t, p, c -> viewModel.editWord(word.id, w, t, p, c); editingWord = null }
-        )
+    if (showAddCategoryDialog) CategoryDialog(onDismiss = { showAddCategoryDialog = false }, onConfirm = { viewModel.addCategory(it); showAddCategoryDialog = false })
+    editingCategory?.let { category -> CategoryDialog(initialValue = category.name, onDismiss = { editingCategory = null }, onConfirm = { viewModel.editCategory(category.id, it); editingCategory = null }) }
+    if (showAddWordDialog) WordDialog(categories = categories, onDismiss = { showAddWordDialog = false }, onConfirm = { w, t, p, c -> viewModel.addWord(c, w, t, p); showAddWordDialog = false })
+    editingWord?.let { word -> WordDialog(categories = categories, initialWord = word, onDismiss = { editingWord = null }, onConfirm = { w, t, p, c -> viewModel.editWord(word.id, w, t, p, c); editingWord = null }) }
+}
+
+@Composable
+fun CategoryChip(
+    name: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    onEdit: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null
+) {
+    val backgroundColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainer
+    val contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+    
+    Surface(
+        color = backgroundColor,
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.clickable { onClick() }
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(name, fontWeight = if(selected) FontWeight.Bold else FontWeight.Medium, color = contentColor)
+            if (onEdit != null && onDelete != null && selected) {
+                Spacer(Modifier.width(8.dp))
+                Icon(Icons.Default.Edit, null, Modifier.size(14.dp).clickable { onEdit() }, tint = contentColor)
+                Spacer(Modifier.width(4.dp))
+                Icon(Icons.Default.Delete, null, Modifier.size(14.dp).clickable { onDelete() }, tint = contentColor)
+            }
+        }
     }
 }
 
@@ -249,37 +327,58 @@ fun WordItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .pointerInput(word) {
-                detectTapGestures(
-                    onLongPress = { onPeekRequest(word) },
-                    onTap = { /* สามารถเพิ่มฟังก์ชันดูคำแปลสั้นๆ ตรงนี้ได้ */ }
-                )
-            }
+            .pointerInput(word) { detectTapGestures(onLongPress = { onPeekRequest(word) }) },
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(word.word, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    IconButton(onClick = onEdit, modifier = Modifier.size(20.dp)) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(16.dp), tint = Color.Gray)
+                    Text(word.word, fontWeight = FontWeight.Bold, fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurface)
+                    if (word.isFavorite) {
+                        Spacer(Modifier.width(6.dp))
+                        Icon(Icons.Default.Star, null, Modifier.size(14.dp), tint = Color(0xFFFFB300))
                     }
                 }
+                
+                Spacer(modifier = Modifier.height(6.dp))
+                
                 if (!word.pos.isNullOrBlank()) {
-                    Text(word.pos, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                    Text(
+                        word.pos, 
+                        style = MaterialTheme.typography.labelSmall, 
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(4.dp))
+                            .padding(horizontal = 6.dp, vertical = 1.dp)
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
                 }
-                Text(word.translation)
-                Text("(กดค้างเพื่อดู Dictionary ค้างไว้)", fontSize = 10.sp, color = Color.Gray)
-            }
-            IconButton(onClick = onFavoriteToggle) {
-                Icon(
-                    if (word.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = "Favorite",
-                    tint = if (word.isFavorite) Color.Red else Color.Gray
+                
+                Text(
+                    word.translation, 
+                    style = MaterialTheme.typography.titleMedium, 
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 24.sp,
+                    fontSize = 19.sp
                 )
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("Hold to see Dictionary", fontSize = 10.sp, color = MaterialTheme.colorScheme.outline)
             }
-            IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, contentDescription = "Delete") }
+            
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onEdit, modifier = Modifier.size(28.dp)) { 
+                    Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), modifier = Modifier.size(14.dp)) 
+                }
+                IconButton(onClick = onFavoriteToggle, modifier = Modifier.size(28.dp)) { 
+                    Icon(if (word.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null, tint = if (word.isFavorite) Color(0xFFEF5350) else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), modifier = Modifier.size(16.dp)) 
+                }
+                IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) { 
+                    Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error.copy(alpha = 0.4f), modifier = Modifier.size(14.dp)) 
+                }
+            }
         }
     }
 }
@@ -290,61 +389,40 @@ fun WordPeekCard(word: Word, onClose: () -> Unit) {
     val url = "https://dictionary.cambridge.org/dictionary/english-thai/$query"
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth(0.9f)
-            .fillMaxHeight(0.8f),
+        modifier = Modifier.fillMaxWidth(0.9f).fillMaxHeight(0.85f),
         shape = RoundedCornerShape(28.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 20.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 24.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Header
-            Row(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.primaryContainer)
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .background(MaterialTheme.colorScheme.primary)
+                    .padding(20.dp)
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(word.word, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                    Text(word.translation, style = MaterialTheme.typography.bodyMedium)
+                Column {
+                    Text(word.word, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
+                    Text(word.translation, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f))
                 }
-                IconButton(onClick = onClose) {
-                    Icon(Icons.Default.Close, contentDescription = "Close")
+                IconButton(onClick = onClose, modifier = Modifier.align(Alignment.TopEnd)) {
+                    Icon(Icons.Default.Close, null, tint = MaterialTheme.colorScheme.onPrimary)
                 }
             }
 
-            // WebView
-            Box(modifier = Modifier.weight(1f)) {
+            Box(modifier = Modifier.weight(1f).background(Color.White)) {
                 AndroidView(
                     factory = { context ->
                         WebView(context).apply {
                             webViewClient = WebViewClient()
-                            settings.apply {
-                                javaScriptEnabled = true
-                                domStorageEnabled = true
-                                databaseEnabled = true
-                                cacheMode = WebSettings.LOAD_DEFAULT
-                            }
+                            settings.apply { javaScriptEnabled = true; domStorageEnabled = true }
                             loadUrl(url)
                         }
                     },
                     modifier = Modifier.fillMaxSize()
                 )
-                
-                Text(
-                    "Loading Dictionary...",
-                    modifier = Modifier.align(Alignment.Center).padding(16.dp),
-                    color = Color.Gray,
-                    fontSize = 12.sp
-                )
-            }
-            
-            Box(
-                modifier = Modifier.fillMaxWidth().padding(12.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("กดที่พื้นหลังเพื่อปิด", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(modifier = Modifier.size(36.dp), strokeWidth = 3.dp)
+                }
             }
         }
     }
@@ -359,9 +437,7 @@ fun QuizScreen(viewModel: MainViewModel) {
     val isFinished by viewModel.isQuizFinished.collectAsState()
 
     if (quizWords.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No words in this category!")
-        }
+        EmptyStateScreen("Add some words to start quiz!")
         return
     }
 
@@ -372,102 +448,114 @@ fun QuizScreen(viewModel: MainViewModel) {
         val progress = (currentIndex + 1).toFloat() / quizWords.size
 
         Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp, vertical = 12.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Progress", style = MaterialTheme.typography.labelMedium)
-                    Text("${currentIndex + 1} / ${quizWords.size}", style = MaterialTheme.typography.labelMedium)
-                }
-                Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("Quiz Mode", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 LinearProgressIndicator(
                     progress = { progress },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp)
-                        .clip(RoundedCornerShape(4.dp)),
+                    modifier = Modifier.weight(1f).height(10.dp).clip(CircleShape),
                     color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
+                Spacer(Modifier.width(16.dp))
+                Text("${currentIndex + 1}/${quizWords.size}", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            if (currentWord.isFavorite) {
-                Text("★ Favorite Word ★", color = Color(0xFFDAA520), fontWeight = FontWeight.Bold)
-            }
+            val cardScale by animateFloatAsState(if (isRevealed) 1.02f else 1f, label = "cardScale")
             
-            Card(
-                modifier = Modifier.fillMaxWidth().height(250.dp).padding(16.dp),
-                onClick = { viewModel.toggleRevealTranslation() }
+            ElevatedCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(240.dp) 
+                    .scale(cardScale)
+                    .clickable { viewModel.toggleRevealTranslation() },
+                shape = RoundedCornerShape(32.dp),
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = if(isRevealed) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+                ),
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp)
             ) {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    Row(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(8.dp)
-                            .clickable { viewModel.toggleRevealHint() },
-                        verticalAlignment = Alignment.CenterVertically
+                Box(modifier = Modifier.fillMaxSize().padding(20.dp)) {
+                    TextButton(
+                        onClick = { viewModel.toggleRevealHint() },
+                        modifier = Modifier.align(Alignment.TopEnd)
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Info,
-                            contentDescription = "Hint",
-                            modifier = Modifier.size(18.dp),
-                            tint = if (isHintRevealed) MaterialTheme.colorScheme.primary else Color.Gray
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "Hint",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = if (isHintRevealed) MaterialTheme.colorScheme.primary else Color.Gray
-                        )
+                        Icon(Icons.Outlined.Info, null, Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Hint", fontSize = 12.sp)
                     }
 
                     Column(
                         modifier = Modifier.align(Alignment.Center),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(currentWord.word, fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            currentWord.word, 
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Black,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 38.sp
+                        )
                         
-                        if (isHintRevealed && !isRevealed) {
-                            Text(
-                                "คำแปลขึ้นต้นด้วย: ${currentWord.translation.take(1)}...",
-                                color = MaterialTheme.colorScheme.secondary,
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                        }
+                        Spacer(modifier = Modifier.height(20.dp))
 
                         if (isRevealed) {
+                            Text(currentWord.translation, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, textAlign = TextAlign.Center)
                             if (!currentWord.pos.isNullOrBlank()) {
-                                Text(currentWord.pos, color = Color.Gray)
+                                Text(currentWord.pos, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.outline)
                             }
-                            Text(currentWord.translation, fontSize = 24.sp)
                         } else {
-                            Text("(Tap to reveal)", color = Color.Gray, fontSize = 14.sp)
+                            if (isHintRevealed) {
+                                Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = RoundedCornerShape(12.dp)) {
+                                    Text("Starts with: ${currentWord.translation.take(1)}...", modifier = Modifier.padding(10.dp), style = MaterialTheme.typography.bodyMedium)
+                                }
+                            } else {
+                                Text("TAP TO REVEAL", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.7f), letterSpacing = 2.sp)
+                            }
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
-                Button(onClick = { viewModel.previousQuizWord() }, enabled = currentIndex > 0) {
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
+                FilledTonalButton(
+                    onClick = { viewModel.previousQuizWord() }, 
+                    enabled = currentIndex > 0,
+                    modifier = Modifier.weight(1f).height(56.dp),
+                    shape = RoundedCornerShape(18.dp)
+                ) {
+                    Icon(Icons.Default.KeyboardArrowLeft, null)
                     Text("Back")
                 }
-                Button(onClick = { viewModel.toggleRevealTranslation() }) {
-                    Text(if (isRevealed) "Hide" else "Reveal")
-                }
+                
                 Button(
-                    onClick = { viewModel.nextQuizWord() }
+                    onClick = { viewModel.nextQuizWord() },
+                    modifier = Modifier.weight(1f).height(56.dp),
+                    shape = RoundedCornerShape(18.dp)
                 ) {
-                    Text(if (currentIndex == quizWords.size - 1) "Finish" else "Next")
+                    Text(if (currentIndex == quizWords.size - 1) "FINISH" else "NEXT")
+                    Icon(Icons.Default.KeyboardArrowRight, null)
                 }
             }
-
-            Button(onClick = { viewModel.startQuiz() }, modifier = Modifier.padding(top = 16.dp)) {
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            TextButton(onClick = { viewModel.startQuiz() }) {
+                Icon(Icons.Default.Refresh, null, Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
                 Text("Shuffle & Restart")
             }
         }
@@ -475,60 +563,38 @@ fun QuizScreen(viewModel: MainViewModel) {
 }
 
 @Composable
-fun QuizFinishedScreen(onRestart: () -> Unit) {
-    val infiniteTransition = rememberInfiniteTransition(label = "congrats")
-    val scale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.2f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "scale"
-    )
+fun EmptyStateScreen(message: String) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(Icons.Default.Info, null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+            Spacer(Modifier.height(16.dp))
+            Text(message, color = MaterialTheme.colorScheme.outline)
+        }
+    }
+}
 
+@Composable
+fun QuizFinishedScreen(onRestart: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().padding(32.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        AnimatedVisibility(
-            visible = true,
-            enter = fadeIn() + scaleIn()
+        Text("🎉", fontSize = 80.sp)
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("Brilliant!", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Black)
+        Text("You've mastered this set.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.outline)
+        
+        Spacer(modifier = Modifier.height(48.dp))
+        
+        Button(
+            onClick = onRestart,
+            modifier = Modifier.fillMaxWidth().height(64.dp),
+            shape = RoundedCornerShape(20.dp)
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    modifier = Modifier
-                        .size(120.dp)
-                        .scale(scale)
-                        .background(Color(0xFFFFD700), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.Star,
-                        contentDescription = null,
-                        modifier = Modifier.size(80.dp),
-                        tint = Color.White
-                    )
-                }
-                Spacer(modifier = Modifier.height(24.dp))
-                Text(
-                    "Congratulations!",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    "You've completed the quiz!",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Spacer(modifier = Modifier.height(32.dp))
-                Button(onClick = onRestart) {
-                    Icon(Icons.Default.Refresh, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Try Again")
-                }
-            }
+            Icon(Icons.Default.Refresh, null)
+            Spacer(Modifier.width(12.dp))
+            Text("Try Another Round", fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -538,9 +604,9 @@ fun CategoryDialog(initialValue: String = "", onDismiss: () -> Unit, onConfirm: 
     var name by remember { mutableStateOf(initialValue) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Category") },
-        text = { TextField(value = name, onValueChange = { name = it }, label = { Text("Name") }) },
-        confirmButton = { Button(onClick = { onConfirm(name) }) { Text("OK") } },
+        title = { Text("Category Name") },
+        text = { OutlinedTextField(value = name, onValueChange = { name = it }, placeholder = { Text("e.g. Travel, Work") }, shape = RoundedCornerShape(12.dp), singleLine = true) },
+        confirmButton = { Button(onClick = { onConfirm(name) }) { Text("Save") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
@@ -559,20 +625,21 @@ fun WordDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initialWord == null) "Add Word" else "Edit Word") },
+        title = { Text(if (initialWord == null) "New Word" else "Edit Word", fontWeight = FontWeight.Bold) },
         text = {
-            Column {
-                TextField(value = word, onValueChange = { word = it }, label = { Text("Word") })
-                TextField(value = pos, onValueChange = { pos = it }, label = { Text("POS (Optional)") })
-                TextField(value = trans, onValueChange = { trans = it }, label = { Text("Translation") })
-                Text("Category:", modifier = Modifier.padding(top = 8.dp))
-                LazyRow {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(value = word, onValueChange = { word = it }, label = { Text("English Word") }, shape = RoundedCornerShape(12.dp), singleLine = true)
+                OutlinedTextField(value = pos, onValueChange = { pos = it }, label = { Text("P.O.S. (e.g. n., v., adj.)") }, shape = RoundedCornerShape(12.dp), singleLine = true)
+                OutlinedTextField(value = trans, onValueChange = { trans = it }, label = { Text("Thai Translation") }, shape = RoundedCornerShape(12.dp), singleLine = true)
+                
+                Text("Category", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     items(categories) { cat ->
                         FilterChip(
                             selected = selectedCatId == cat.id,
                             onClick = { selectedCatId = cat.id },
                             label = { Text(cat.name) },
-                            modifier = Modifier.padding(end = 4.dp)
+                            shape = RoundedCornerShape(8.dp)
                         )
                     }
                 }
@@ -580,7 +647,7 @@ fun WordDialog(
         },
         confirmButton = {
             Button(onClick = { if (word.isNotBlank() && trans.isNotBlank() && selectedCatId.isNotBlank()) onConfirm(word, trans, pos, selectedCatId) }) {
-                Text("OK")
+                Text("Add Word")
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
