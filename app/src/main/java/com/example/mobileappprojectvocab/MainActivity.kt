@@ -123,6 +123,8 @@ fun WordListScreen(viewModel: MainViewModel) {
     var showAddWordDialog by remember { mutableStateOf(false) }
     var editingWord by remember { mutableStateOf<Word?>(null) }
     var editingCategory by remember { mutableStateOf<Category?>(null) }
+    var deletingWordId by remember { mutableStateOf<String?>(null) }
+    var deletingCategoryId by remember { mutableStateOf<String?>(null) }
     
     var peekingWord by remember { mutableStateOf<Word?>(null) }
 
@@ -190,7 +192,7 @@ fun WordListScreen(viewModel: MainViewModel) {
                         selected = selectedCategoryId == category.id,
                         onClick = { viewModel.selectCategory(category.id) },
                         onEdit = { editingCategory = category },
-                        onDelete = { viewModel.deleteCategory(category.id) }
+                        onDelete = { deletingCategoryId = category.id }
                     )
                 }
                 item {
@@ -249,7 +251,7 @@ fun WordListScreen(viewModel: MainViewModel) {
                     WordItem(
                         word = word,
                         onFavoriteToggle = { viewModel.toggleFavorite(word.id) },
-                        onDelete = { viewModel.deleteWord(word.id) },
+                        onDelete = { deletingWordId = word.id },
                         onEdit = { editingWord = word },
                         onPeekRequest = { peekingWord = it }
                     )
@@ -279,10 +281,50 @@ fun WordListScreen(viewModel: MainViewModel) {
         }
     }
 
+    // Confirm Word Delete Dialog
+    deletingWordId?.let { wordId ->
+        ConfirmDeleteDialog(
+            title = "Delete Word?",
+            message = "Are you sure you want to remove this word from your list?",
+            onDismiss = { deletingWordId = null },
+            onConfirm = { viewModel.deleteWord(wordId); deletingWordId = null }
+        )
+    }
+
+    // Confirm Category Delete Dialog
+    deletingCategoryId?.let { catId ->
+        ConfirmDeleteDialog(
+            title = "Delete Category?",
+            message = "Removing this category will NOT delete the words inside it. Are you sure?",
+            onDismiss = { deletingCategoryId = null },
+            onConfirm = { viewModel.deleteCategory(catId); deletingCategoryId = null }
+        )
+    }
+
     if (showAddCategoryDialog) CategoryDialog(onDismiss = { showAddCategoryDialog = false }, onConfirm = { viewModel.addCategory(it); showAddCategoryDialog = false })
     editingCategory?.let { category -> CategoryDialog(initialValue = category.name, onDismiss = { editingCategory = null }, onConfirm = { viewModel.editCategory(category.id, it); editingCategory = null }) }
     if (showAddWordDialog) WordDialog(categories = categories, onDismiss = { showAddWordDialog = false }, onConfirm = { w, t, p, c -> viewModel.addWord(c, w, t, p); showAddWordDialog = false })
     editingWord?.let { word -> WordDialog(categories = categories, initialWord = word, onDismiss = { editingWord = null }, onConfirm = { w, t, p, c -> viewModel.editWord(word.id, w, t, p, c); editingWord = null }) }
+}
+
+@Composable
+fun ConfirmDeleteDialog(title: String, message: String, onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+        title = { Text(title) },
+        text = { Text(message) },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) { Text("Delete") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+        shape = RoundedCornerShape(24.dp)
+    )
 }
 
 @Composable
