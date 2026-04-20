@@ -19,9 +19,9 @@
 <br>
 
 <div align="center">
-  <img src="docs/image-2.png" alt="alt text" width="45%">
+  <img src="Source Code/docs/image-2.png" alt="alt text" width="50%">
   &nbsp;
-  <img src="docs/image-1.png" alt="alt text" width="45%">
+  <img src="Source Code/docs/image-1.png" alt="alt text" width="45%">
 </div>
 
 <br>
