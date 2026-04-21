@@ -3,10 +3,10 @@
 ภาพรวมการทำงานของแอปพลิเคชัน CP213 Practice English Vocab ออกแบบมาเพื่อให้ผู้ใช้สามารถจัดการคำศัพท์และทดสอบความจำได้อย่างต่อเนื่องใน Flow เดียว:
 
 <p align="center">
-  <img src="docs/wireframes/app-flow.png" width="700" alt="CP213 App Flow">
+  <img src="docs/Flow-app.png" width="700" alt="CP213 App Flow">
 </p>
 
-> ✏️ *สามารถดูหรือแก้ไขไฟล์ต้นฉบับได้ที่: [app-flow.drawio](docs/design/app-flow.drawio) (เปิดด้วย draw.io)*
+> ✏️ *สามารถดูหรือแก้ไขไฟล์ต้นฉบับได้ที่: [app-flow.drawio](docs/Flow-app.drawio) (เปิดด้วย draw.io)*
 
 ### 📌 User Journey & Features
 จากแผนภาพด้านบน ผู้ใช้สามารถใช้งานฟังก์ชันหลักๆ ได้ดังนี้:
