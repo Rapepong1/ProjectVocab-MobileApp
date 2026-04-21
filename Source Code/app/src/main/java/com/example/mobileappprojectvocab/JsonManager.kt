@@ -72,4 +72,12 @@ class DataManager(context: Context) {
         if (!prefs.contains("dark_mode")) return null
         return prefs.getBoolean("dark_mode", false)
     }
+
+    fun getWidgetOffset(): Int {
+        return prefs.getInt("widget_offset", 0)
+    }
+
+    fun saveWidgetOffset(offset: Int) {
+        prefs.edit().putInt("widget_offset", offset).apply()
+    }
 }
