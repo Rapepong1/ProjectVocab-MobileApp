@@ -14,6 +14,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -49,7 +50,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MobileAppProjectVocabTheme {
+            val isDarkMode by viewModel.isDarkMode.collectAsState()
+            val darkTheme = isDarkMode ?: isSystemInDarkTheme()
+            
+            MobileAppProjectVocabTheme(darkTheme = darkTheme) {
                 VocabularyApp(viewModel)
             }
         }
@@ -118,6 +122,8 @@ fun WordListScreen(viewModel: MainViewModel) {
     val words by viewModel.filteredWords.collectAsState()
     val selectedCategoryId by viewModel.selectedCategoryId.collectAsState()
     val sortOrder by viewModel.sortOrder.collectAsState()
+    val isDarkMode by viewModel.isDarkMode.collectAsState()
+    val darkTheme = isDarkMode ?: isSystemInDarkTheme()
 
     var showAddCategoryDialog by remember { mutableStateOf(false) }
     var showAddWordDialog by remember { mutableStateOf(false) }
@@ -153,14 +159,28 @@ fun WordListScreen(viewModel: MainViewModel) {
                     )
                 }
                 
-                FloatingActionButton(
-                    onClick = { showAddWordDialog = true },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Word")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    FilledTonalButton(
+                        onClick = { viewModel.toggleDarkMode() },
+                        modifier = Modifier.padding(end = 8.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            if (darkTheme) "Light Mode" else "Dark Mode",
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+
+                    FloatingActionButton(
+                        onClick = { showAddWordDialog = true },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Add Word")
+                    }
                 }
             }
             

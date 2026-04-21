@@ -42,6 +42,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isQuizFinished = MutableStateFlow(false)
     val isQuizFinished: StateFlow<Boolean> = _isQuizFinished.asStateFlow()
 
+    private val _isDarkMode = MutableStateFlow<Boolean?>(null)
+    val isDarkMode: StateFlow<Boolean?> = _isDarkMode.asStateFlow()
+
     enum class SortOrder { ALPHABETICAL, CREATED_AT }
 
     val filteredWords: StateFlow<List<Word>> = combine(
@@ -66,6 +69,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         loadData()
+        _isDarkMode.value = dataManager.loadDarkMode()
     }
 
     private fun loadData() {
@@ -125,6 +129,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun saveToDisk() {
         dataManager.saveCategories(_categories.value)
         dataManager.saveWords(_words.value)
+    }
+
+    fun toggleDarkMode() {
+        val current = _isDarkMode.value ?: false
+        val newValue = !current
+        _isDarkMode.value = newValue
+        dataManager.saveDarkMode(newValue)
     }
 
     fun selectCategory(id: String) {

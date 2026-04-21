@@ -63,4 +63,13 @@ class DataManager(context: Context) {
         }
         return list
     }
+
+    fun saveDarkMode(isDark: Boolean) {
+        prefs.edit().putBoolean("dark_mode", isDark).apply()
+    }
+
+    fun loadDarkMode(): Boolean? {
+        if (!prefs.contains("dark_mode")) return null
+        return prefs.getBoolean("dark_mode", false)
+    }
 }
