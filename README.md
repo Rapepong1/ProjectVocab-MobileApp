@@ -83,4 +83,15 @@
 * `Models.kt`: Data classes สำหรับ `Word` และ `Category`
 * `JsonManager.kt`: Core utility สำหรับจัดการเซฟและโหลดข้อมูล Local
 
----
+<br><hr>
+
+### 🎥 Vocabulary Mobile Application - Showcase Video
+
+<div align="center">
+  <a href="https://youtu.be/h61tATwW6JY">
+    <img src="https://img.youtube.com/vi/h61tATwW6JY/0.jpg" width="600" alt="Watch the video">
+  </a>
+  <br>
+  <em> 🔗 คลิกที่รูปเพื่อรับชม Vocab App Video 🔗</em>
+</div>
+<br>
